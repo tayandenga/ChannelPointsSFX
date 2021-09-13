@@ -11,5 +11,14 @@
     <Setting Name="minimizeToTray" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="rewardTimer" Type="System.Decimal" Scope="User">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+    <Setting Name="serverStatus" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="httpPort" Type="System.Decimal" Scope="User">
+      <Value Profile="(Default)">8080</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

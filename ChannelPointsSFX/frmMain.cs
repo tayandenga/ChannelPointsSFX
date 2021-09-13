@@ -1,4 +1,5 @@
-﻿#pragma warning disable IDE1006 // Naming Styles
+﻿#define DEBUG
+#pragma warning disable IDE1006 // Naming Styles
 using System;
 using System.Windows.Forms;
 using TwitchLib.PubSub;
@@ -6,6 +7,10 @@ using TwitchLib.PubSub.Events;
 using System.Collections.Generic;
 using System.Windows.Media;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Net;
+using System.Text;
 
 #if DEBUG
 using System.Diagnostics;
@@ -22,14 +27,81 @@ namespace ChannelPointsSFX
         private static List<MediaPlayer> allPlayers = new List<MediaPlayer>();
         private int volumeLevel, savedVolumeLevel; 
         private int boxSelection = 0;
+        private static HttpListener listener;
+        private object mutex = new object();
+        private static bool killServer = false;
 
         public frmMain()
         {
             InitializeComponent();
         }
 
+        private void HandleConnections(object state)
+        {
+            btnServer.ForeColor = System.Drawing.Color.Green;
+            try
+            {
+                listener = new HttpListener();
+                listener.Prefixes.Add("http://localhost:" + Decimal.ToInt32(Properties.Settings.Default.httpPort) + "/");
+                listener.Start();
+
+                Task listenTask = HandleIncomingConnections();
+                listenTask.GetAwaiter().GetResult();
+
+                listener.Close();
+                killServer = false;
+                btnServer.ForeColor = System.Drawing.Color.Red;
+            }
+            finally
+            {
+                lock (mutex)
+                {
+                    Properties.Settings.Default.serverStatus = false;
+                }
+            }
+        }
+
+        private static async Task HandleIncomingConnections()
+        {
+            while (!killServer)
+            {
+                HttpListenerContext ctx = await listener.GetContextAsync();
+                HttpListenerRequest req = ctx.Request;
+
+                string headStr = "", bodyStr = "";
+                if (req.Url.AbsolutePath == "/")
+                {
+                    headStr = "<meta http-equiv=\"refresh\" content=\"1\">";
+                    if (File.Exists("alert.txt"))
+                    {
+                        bodyStr = File.ReadAllText("alert.txt");
+                    }
+                }
+
+                byte[] data = Encoding.UTF8.GetBytes("<!DOCTYPE html>" +
+                "<html lang=\"en\">" +
+                    "<head>" +
+                    "<meta charset=\"utf-8\">" +
+                    headStr +
+                    "</head>" +
+                    "<body>" +
+                    bodyStr +
+                    "</body>" +
+                "</html>");
+
+                HttpListenerResponse resp = ctx.Response;
+                resp.ContentType = "text/html";
+                resp.ContentEncoding = Encoding.UTF8;
+                resp.ContentLength64 = data.LongLength;
+
+                await resp.OutputStream.WriteAsync(data, 0, data.Length);
+                resp.Close();
+            }
+        }
+
         private void frmMain_Load(object sender, EventArgs e)
         {
+            Properties.Settings.Default.serverStatus = false;
             volumeLevel = savedVolumeLevel = Convert.ToInt32(Properties.Settings.Default.savedVolumeLevel);
             
             client = new TwitchPubSub();
@@ -38,19 +110,22 @@ namespace ChannelPointsSFX
             client.OnListenResponse += onListenResponse;
             client.OnRewardRedeemed += OnRewardRedeemed;
 
-            
-            if (File.Exists("resetid.txt")) { Properties.Settings.Default.savedChannelID = ""; File.Delete("resetid.txt"); }
             if (Properties.Settings.Default.savedChannelID == "")
             {
                 Properties.Settings.Default.savedChannelID = Prompt.ShowDialog("Please enter your Twitch ChannelID. (THIS IS NOT YOUR USERNAME)\r\nGo to https://dude22072.com/twitchchannelid.php if you don't know what this is.", "Enter Channel ID");
                 if (Properties.Settings.Default.savedChannelID == "") { this.Close(); return; }
                 Properties.Settings.Default.Save();
             }
-            client.ListenToRewards(Properties.Settings.Default.savedChannelID);
 
+            client.ListenToRewards(Properties.Settings.Default.savedChannelID);
             client.Connect();
 
-            if(File.Exists("settings.txt"))
+            if (File.Exists("alert.txt"))
+            {
+                File.Delete("alert.txt");
+            }
+
+            if (File.Exists("settings.txt"))
             {
                 String[] loadSettings = File.ReadAllLines("settings.txt");
                 foreach(string line in loadSettings)
@@ -145,8 +220,38 @@ namespace ChannelPointsSFX
         /// </summary>
         private static void onListenResponse(object sender, OnListenResponseArgs e)
         {
-            if (!e.Successful)
+            if (e.Successful)
+            {
+#if DEBUG
+                Debug.WriteLine($"Successfully verified listening to topic: {e.Topic}");
+#endif
+            }
+            else
                 throw new Exception($"Failed to listen! Response: {e.Response}");
+        }
+
+        private void BuildAlert(string Title, string DisplayName, int RewardCost, string Sound)
+        {
+            if (File.Exists("alert.txt"))
+            {
+                Task.Delay(500).ContinueWith((task) => {
+                    BuildAlert(Title, DisplayName, RewardCost, Sound);
+                });
+            }
+            else
+            {
+                File.WriteAllText("alert.txt", "<h1>" + Title + "</h1>\n<h2>" + DisplayName + "</h2>\n<h3>" + RewardCost + "</h3>");
+                Task.Delay(500).ContinueWith((task) => {
+                    PlaySound(Sound);
+                });
+
+                Task.Delay(Decimal.ToInt32(Properties.Settings.Default.rewardTimer) * 1000).ContinueWith((task) => {
+                    if (File.Exists("alert.txt"))
+                    {
+                        File.Delete("alert.txt");
+                    }
+                });
+            }
         }
 
         /// <summary>
@@ -156,10 +261,10 @@ namespace ChannelPointsSFX
         {
 #if DEBUG
             Debug.WriteLine("Reward Redeemed:");
-            Debug.WriteLine("\tTitle:"+e.RewardTitle+"|");
-            Debug.WriteLine("\tPrompt:"+e.RewardPrompt+"|");
-            Debug.WriteLine("\tUser:" + e.DisplayName+"|");
-            Debug.WriteLine("\tStatus:" + e.Status+"|");
+            Debug.WriteLine("\tTitle:" + e.RewardTitle + "|");
+            Debug.WriteLine("\tPrompt:" + e.RewardPrompt + "|");
+            Debug.WriteLine("\tUser:" + e.DisplayName + "|");
+            Debug.WriteLine("\tStatus:" + e.Status + "|");
             Debug.WriteLine("----------------");
 #endif
             if(bindings.ContainsKey(e.RewardTitle) && e.Status != "ACTION_TAKEN")
@@ -168,7 +273,7 @@ namespace ChannelPointsSFX
 #if DEBUG
                 Debug.WriteLine(output);
 #endif
-                PlaySound(output);
+                BuildAlert(e.RewardTitle, e.DisplayName, e.RewardCost, output);
             }
         }
 
@@ -220,7 +325,6 @@ namespace ChannelPointsSFX
             btnStopAll.Enabled = true;
             allPlayers.Add(thePlayer);
             thePlayer.Play();
-            
         }
 
         /// <summary>
@@ -412,6 +516,25 @@ namespace ChannelPointsSFX
             btnSettings.Enabled = false;
         }
 
+        private void btnServer_Click(object sender, EventArgs e)
+        {
+            lock (mutex)
+            {
+                if (Properties.Settings.Default.serverStatus == true)
+                {
+                    killServer = true;
+                    btnServer.ForeColor = System.Drawing.Color.Orange;
+                }
+                else
+                {
+                    killServer = false;
+                    Properties.Settings.Default.serverStatus = true;
+                    btnServer.ForeColor = System.Drawing.Color.Orange;
+                    ThreadPool.QueueUserWorkItem(HandleConnections);
+                }
+            }
+        }
+
         void oFrmOptions_enSetBut()
         {
             btnSettings.Enabled = true;
@@ -421,12 +544,13 @@ namespace ChannelPointsSFX
         {
             if (lstbxSoundsRewards.SelectedItem == null) return;
             bindings.TryGetValue(lstbxSoundsRewards.SelectedItem.ToString(), out string output);
-
-            string rewardName = Prompt.ShowDialog("Enter the twitch Channel Points reward name EXACTLY as it is on twitch.", "Channel Reward Name");
-
-            bindings.Remove(lstbxSoundsRewards.SelectedItem.ToString());
-            bindings[rewardName] = output;
-            reloadListItems();
+            if (output.Length > 0)
+            {
+                string rewardName = Prompt.ShowDialog("Enter the twitch Channel Points reward name EXACTLY as it is on twitch.", "Channel Reward Name");
+                bindings.Remove(lstbxSoundsRewards.SelectedItem.ToString());
+                bindings[rewardName] = output;
+                reloadListItems();
+            }
         }
 
         private void btnEditSound_Click(object sender, EventArgs e)
@@ -485,6 +609,7 @@ namespace ChannelPointsSFX
                 Text = caption,
                 StartPosition = FormStartPosition.CenterScreen
             };
+
             Label textLabel = new Label() { Left = 50, Top = 20, AutoSize = true, Text = text };
             TextBox textBox = new TextBox() { Left = 50, Top = 50, Width = 400 };
             Button confirmation = new Button() { Text = "Ok", Left = 350, Width = 100, Top = 70, DialogResult = DialogResult.OK };
@@ -498,12 +623,9 @@ namespace ChannelPointsSFX
                 prompt.Dispose();
                 return textBox.Text;
             } 
-            else
-            {
-                prompt.Dispose();
-                return "";
-            }
-            
+
+            prompt.Dispose();
+            return "";
         }
     }
 }

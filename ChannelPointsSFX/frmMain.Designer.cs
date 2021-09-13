@@ -48,6 +48,7 @@
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.btnEditTitle = new System.Windows.Forms.Button();
             this.btnEditSound = new System.Windows.Forms.Button();
+            this.btnServer = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.trkVolume)).BeginInit();
             this.SuspendLayout();
             // 
@@ -181,9 +182,9 @@
             // 
             // lblNOTICE
             // 
-            this.lblNOTICE.Location = new System.Drawing.Point(12, 265);
+            this.lblNOTICE.Location = new System.Drawing.Point(15, 265);
             this.lblNOTICE.Name = "lblNOTICE";
-            this.lblNOTICE.Size = new System.Drawing.Size(305, 13);
+            this.lblNOTICE.Size = new System.Drawing.Size(254, 13);
             this.lblNOTICE.TabIndex = 11;
             this.lblNOTICE.Text = "Update available on GitHub!";
             this.lblNOTICE.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -235,11 +236,24 @@
             this.btnEditSound.UseVisualStyleBackColor = true;
             this.btnEditSound.Click += new System.EventHandler(this.btnEditSound_Click);
             // 
+            // btnServer
+            // 
+            this.btnServer.ForeColor = System.Drawing.Color.Red;
+            this.btnServer.Location = new System.Drawing.Point(269, 260);
+            this.btnServer.Name = "btnServer";
+            this.btnServer.Size = new System.Drawing.Size(21, 23);
+            this.btnServer.TabIndex = 16;
+            this.btnServer.Text = "🚀";
+            this.toolTip1.SetToolTip(this.btnServer, "Start/stops built-in HTTP server");
+            this.btnServer.UseVisualStyleBackColor = true;
+            this.btnServer.Click += new System.EventHandler(this.btnServer_Click);
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(325, 287);
+            this.Controls.Add(this.btnServer);
             this.Controls.Add(this.btnEditSound);
             this.Controls.Add(this.btnEditTitle);
             this.Controls.Add(this.btnSettings);
@@ -289,6 +303,7 @@
         private System.Windows.Forms.ToolTip toolTip1;
         private System.Windows.Forms.Button btnEditTitle;
         private System.Windows.Forms.Button btnEditSound;
+        private System.Windows.Forms.Button btnServer;
     }
 }
 
