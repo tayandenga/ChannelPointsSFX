@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="1">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Baloo+Chettan+2:wght@400;700&display=swap');
+body{ 
+  margin: 0 auto;
+  overflow: hidden;
+  text-align: center;
+}
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 96px;
+  font-family: 'Baloo Chettan 2', Arial;
+  color: #fff;
+}
+.container img {
+  width: 64px;
+  height: 64px;
+}
+.animate{
+  animation: glitch 1s linear infinite;
+  font-weight: 700;
+}
+.animate:before,
+.animate:after{
+  content: attr(title);
+  position: absolute;
+  left: 0;
+}
+.animate:before{
+  animation: glitchTop 1s linear infinite;
+  clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+  -webkit-clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+}
+.animate:after{
+  animation: glitchBotom 1.5s linear infinite;
+  clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+  -webkit-clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+}
+@keyframes glitch{
+  2%,64%{
+    transform: translate(2px,0) skew(0deg);
+  }
+  4%,60%{
+    transform: translate(-2px,0) skew(0deg);
+  }
+  62%{
+    transform: translate(0,0) skew(5deg); 
+  }
+}
+@keyframes glitchTop{
+  2%,64%{
+    transform: translate(2px,-2px);
+  }
+  4%,60%{
+    transform: translate(-2px,2px);
+  }
+  62%{
+    transform: translate(13px,-1px) skew(-13deg); 
+  }
+}
+@keyframes glitchBotom{
+  2%,64%{
+    transform: translate(-2px,0);
+  }
+  4%,60%{
+    transform: translate(-2px,0);
+  }
+  62%{
+    transform: translate(-22px,5px) skew(21deg); 
+  }
+}
+</style>
+</head>
+<body>
+<img src="http://img.pietrzak.biz/images/2021/09/13/uXQsP5col.gif">
+<div class="container">
+<div class="animate" title="|DISPLAY_NAME|">|DISPLAY_NAME|</div> &nbsp;odebrał &nbsp;<div class="animate" title="|TITLE|">|TITLE|</div> &nbsp;(<img src="https://static-cdn.jtvnw.net/channel-points-icons/60253521/8feb297d-934e-4c6a-8032-a553b4ab045b/icon-1.png"> |COST|)
+</div>
+</body>
+</html>

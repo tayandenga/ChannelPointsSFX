@@ -63,6 +63,7 @@ namespace ChannelPointsSFX
 
         private static async Task HandleIncomingConnections()
         {
+            string alertSchema = File.ReadAllText("alert.html");
             while (!killServer)
             {
                 HttpListenerContext ctx = await listener.GetContextAsync();
@@ -71,23 +72,35 @@ namespace ChannelPointsSFX
                 string headStr = "", bodyStr = "";
                 if (req.Url.AbsolutePath == "/")
                 {
-                    headStr = "<meta http-equiv=\"refresh\" content=\"1\">";
                     if (File.Exists("alert.txt"))
                     {
-                        bodyStr = File.ReadAllText("alert.txt");
+                        String[] alertData = File.ReadAllLines("alert.txt");
+                        if (alertData.Length == 3)
+                        {
+                            bodyStr = alertSchema.Replace("|DISPLAY_NAME|", alertData[0]).Replace("|TITLE|", alertData[1]).Replace("|COST|", alertData[2]);
+                        }
+                    }
+                    else
+                    {
+                        headStr = "<meta http-equiv=\"refresh\" content=\"1\">";
                     }
                 }
 
-                byte[] data = Encoding.UTF8.GetBytes("<!DOCTYPE html>" +
-                "<html lang=\"en\">" +
-                    "<head>" +
-                    "<meta charset=\"utf-8\">" +
-                    headStr +
-                    "</head>" +
-                    "<body>" +
-                    bodyStr +
-                    "</body>" +
-                "</html>");
+                byte[] data = Encoding.UTF8.GetBytes("");
+                if (headStr.Length > 0)
+                {
+                    data = Encoding.UTF8.GetBytes("<!DOCTYPE html>" +
+                    "<html lang=\"en\">" +
+                        "<head>" +
+                        "<meta charset=\"utf-8\">" +
+                        headStr +
+                        "</head>" +
+                    "</html>");
+                }
+                else if (bodyStr.Length > 0)
+                {
+                    data = Encoding.UTF8.GetBytes(bodyStr);
+                }
 
                 HttpListenerResponse resp = ctx.Response;
                 resp.ContentType = "text/html";
@@ -240,7 +253,7 @@ namespace ChannelPointsSFX
             }
             else
             {
-                File.WriteAllText("alert.txt", "<h1>" + Title + "</h1>\n<h2>" + DisplayName + "</h2>\n<h3>" + RewardCost + "</h3>");
+                File.WriteAllText("alert.txt", DisplayName + "\n" + Title + "\n" + RewardCost);
                 Task.Delay(500).ContinueWith((task) => {
                     PlaySound(Sound);
                 });
