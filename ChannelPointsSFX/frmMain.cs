@@ -1,5 +1,4 @@
-﻿#define DEBUG
-#pragma warning disable IDE1006 // Naming Styles
+﻿#pragma warning disable IDE1006 // Naming Styles
 using System;
 using System.Windows.Forms;
 using TwitchLib.PubSub;
